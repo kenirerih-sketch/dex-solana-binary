@@ -2,6 +2,8 @@
 
 All parameters can be configured via CLI flags (`--flag-name`) or environment variables.
 
+CLI flag names follow the pattern: `FOO_BAR_BAZ` -> `--foo-bar-baz`. For example, `RPC_MAX_CONCURRENT_REQUESTS` can be set via `--rpc-max-concurrent-requests 50`. Run `pallas --help` for a complete list.
+
 ## Authentication
 
 
@@ -23,10 +25,11 @@ All parameters can be configured via CLI flags (`--flag-name`) or environment va
 | `RPC_URL`                | **Required** | Solana RPC endpoint                                                                                                                                                                                           |
 | `GEYSER_GRPC_ENDPOINT`   | Not set      | Geyser gRPC streaming endpoint                                                                                                                                                                                |
 | `GEYSER_GRPC_X_TOKEN`    | Not set      | Geyser gRPC authentication token                                                                                                                                                                              |
-| `GEYSER_MODE`            | `auto`       | `auto` / `yellowstone` / `richat` / `rpc-only`. In auto mode, uses Yellowstone if gRPC endpoint is set, otherwise falls back to RPC polling. Specifying yellowstone or richat requires `GEYSER_GRPC_ENDPOINT` |
+| `GEYSER_MODE`            | `auto`       | `auto` / `yellowstone` / `richat` / `rpc-only`. In auto mode, probes the gRPC endpoint with `GetVersion` to detect Richat vs Yellowstone; probe failure falls back to Yellowstone. If no gRPC endpoint is set, falls back to RPC polling. Specifying yellowstone or richat requires `GEYSER_GRPC_ENDPOINT` |
 | `GEYSER_GRPC_COMMITMENT` | `processed`  | Commitment level for gRPC subscriptions and RPC fallback. Valid values: `processed` / `confirmed` / `finalized` (case-insensitive)                                                                            |
 | `SHUTDOWN_TIMEOUT_SECS`  | `1`          | Graceful shutdown timeout (seconds)                                                                                                                                                                           |
-| `RPC_MAX_CONCURRENT_REQUESTS` | `100` | Max concurrent RPC `getMultipleAccounts` batch requests                                                                                                                                                       |
+| `HOST`                        | `0.0.0.0`   | Business API bind address                                                                                                                                                                                |
+| `RPC_MAX_CONCURRENT_REQUESTS` | `50`  | Max concurrent RPC `getMultipleAccounts` batch requests. Set to `0` to enable adaptive concurrency (AIMD growth/decay)                                                                                        |
 | `RPC_POLL_INTERVAL_MS`   | `200`        | Polling interval in milliseconds (RPC-only mode)                                                                                                                                                              |
 
 
@@ -42,11 +45,13 @@ All parameters can be configured via CLI flags (`--flag-name`) or environment va
 | `GEYSER_GRPC_RESET_ON_GAP`             | `300`   | Stream gap threshold (seconds) to trigger full RPC backfill; 0 to disable |
 | `GEYSER_GRPC_CHANNEL_UPDATE_CAPACITY`  | `16384` | Internal channel capacity for account updates                             |
 | `GRPC_CONSISTENCY_CHECK_INTERVAL_SECS` | `30`    | Consistency check interval (seconds)                                      |
-| `RICHAT_MAX_PUBKEYS_PER_FILTER`        | `100`   | Richat mode: max pubkeys per filter (must be > 0)                         |
-| `RICHAT_MAX_FILTERS_PER_SUBSCRIBE`     | `10`    | Richat mode: max filters per subscribe request (must be >= 2)             |
+| `YELLOWSTONE_FLUSH_INTERVAL_SECS`      | `30`    | Yellowstone mode: flush interval for pending subscription diffs; controls how often add/remove changes are coalesced and reconnects are triggered |
+| `RICHAT_MAX_PUBKEYS_PER_FILTER`        | `100`   | Max pubkeys per account filter (must be > 0). Richat enforces it as a server limit; Yellowstone uses it to split a large shard subscription into multiple account filters inside one full `SubscribeRequest` |
+| `RICHAT_MAX_FILTERS_PER_SUBSCRIBE`     | `10`    | Richat mode only: max filters per subscribe request (must be >= 2)        |
 | `SOFT_RECONNECT_TIMEOUT_SECS`         | `300`   | Soft-reconnect timeout (seconds); escalates to HardReconnecting (503) when exceeded |
 | `SLOT_FRESHNESS_THRESHOLD`             | `50`    | Max allowed slot lag during startup readiness gate                         |
 | `SLOT_FRESHNESS_TIMEOUT_SECS`          | `30`    | Max wait time (seconds) for slot freshness gate at startup                |
+| `GEYSER_AUTO_DETECT_TIMEOUT_MS`        | `2000`  | Geyser auto-detect timeout (ms)                                           |
 
 
 ## Threading & Performance
@@ -55,7 +60,6 @@ All parameters can be configured via CLI flags (`--flag-name`) or environment va
 | Env Var            | Default    | Description                       |
 | ------------------ | ---------- | --------------------------------- |
 | `API_THREADS`      | `0` (auto) | API service thread count          |
-| `QUOTE_THREADS`    | `0` (auto) | Quote computation thread count    |
 | `PIPELINE_THREADS` | `0` (auto) | Data pipeline thread count        |
 | `ROUTE_THREADS`    | `0` (auto) | Route computation Rayon pool size |
 
@@ -63,10 +67,10 @@ All parameters can be configured via CLI flags (`--flag-name`) or environment va
 Each parameter is evaluated independently. When set to `0`, auto-allocation follows this table:
 
 
-| CPU Cores | API | Quote | Pipeline | Route     |
-| --------- | --- | ----- | -------- | --------- |
-| <= 8      | 1   | 1     | 2        | Remaining |
-| > 8       | 2   | 2     | 4        | Remaining |
+| CPU Cores | API | Pipeline | Route                                        |
+| --------- | --- | -------- | -------------------------------------------- |
+| <= 8      | 2   | 2        | (cpus - API - Pipeline) / chain_count, min 1 |
+| > 8       | 4   | 4        | (cpus - API - Pipeline) / chain_count, min 1 |
 
 
 ## Market Data
