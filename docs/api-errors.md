@@ -23,10 +23,10 @@ Both endpoints share parameter validation and routing logic; error codes are ide
 | 400  | `INVALID_SLIPPAGE`            | `slippagePercent` not in [0, 100) or is NaN                                        |
 | 400  | `INVALID_AMOUNT`              | `amount` is 0                                                                      |
 | 400  | `INVALID_WALLET`              | `userWalletAddress` is empty, invalid base58, or not 32 bytes after decoding       |
-| 400  | `INVALID_CYCLE_ARBITRAGE`     | `enableCycleArbitrage=true` but `fromTokenAddress != toTokenAddress`               |
-| 400  | `INVALID_TOKEN_PAIR`          | `fromTokenAddress == toTokenAddress` but `enableCycleArbitrage=false`              |
-| 400  | `MISSING_INTERMEDIATE_TOKENS` | `enableCycleArbitrage=true` but `intermediateTokens` not provided                  |
-| 400  | `INVALID_INTERMEDIATE_TOKEN`  | `intermediateTokens` contains invalid base58 or not 32 bytes after decoding        |
+| 400  | `INVALID_CYCLE_ARBITRAGE`     | `enableCyclicArbitrage=true` but `fromTokenAddress != toTokenAddress`              |
+| 400  | `INVALID_TOKEN_PAIR`          | `fromTokenAddress == toTokenAddress` but `enableCyclicArbitrage=false`             |
+| 400  | `MISSING_INTERMEDIATE_TOKENS` | `enableCyclicArbitrage=true` but `cyclicArbitrageIntermediateTokens` not provided  |
+| 400  | `INVALID_INTERMEDIATE_TOKEN`  | `cyclicArbitrageIntermediateTokens` contains invalid base58 or not 32 bytes        |
 | 400  | `INVALID_DEX_ID`              | `dexIds` / `excludedDexIds` contains invalid base58 or not 32 bytes after decoding |
 
 
@@ -74,3 +74,13 @@ Both endpoints share parameter validation and routing logic; error codes are ide
 | HTTP | errorCode | Condition                                         |
 | ---- | --------- | ------------------------------------------------- |
 | 504  | `TIMEOUT` | Request processing exceeded 10ms internal timeout |
+
+
+# `/evict-pools` Error Codes
+
+
+| HTTP | errorCode              | Condition                            |
+| ---- | ---------------------- | ------------------------------------ |
+| 400  | `INVALID_REQUEST`      | Empty `pools` array or > 1000 items  |
+| 400  | `CHAIN_NOT_CONFIGURED` | Unknown `chainId`                    |
+| 400  | `CHAIN_NOT_SUPPORTED`  | Chain does not support pool eviction |

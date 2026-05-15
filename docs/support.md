@@ -52,7 +52,7 @@ After creating an API Key, ensure the required permissions and IP whitelist are 
 
 **429 Too Many Requests from RPC node**
 
-Free-tier RPC nodes have rate limits. Occasional 429 warnings during startup are normal — Pallas respects `RPC_MAX_CONCURRENT_REQUESTS` (default 100) to cap concurrent RPC calls, and will automatically retry. If 429 errors persist, consider using a paid RPC endpoint or reducing `RPC_MAX_CONCURRENT_REQUESTS` (e.g. to 10-20).
+Free-tier RPC nodes have rate limits. Occasional 429 warnings during startup are normal — Pallas respects `RPC_MAX_CONCURRENT_REQUESTS` (default 50) to cap concurrent RPC calls, and will automatically retry. If 429 errors persist, consider using a paid RPC endpoint or reducing `RPC_MAX_CONCURRENT_REQUESTS` (e.g. to 10-20).
 
 # Feedback & Support
 
